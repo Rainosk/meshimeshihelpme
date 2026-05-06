@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover" />
+    <title>何を食べよう</title>
+    <link rel="stylesheet" href="style.css" />
+    <!-- PWA 配置 -->
+    <link rel="manifest" href="manifest.json" />
+    <!-- 让 Android Chrome 提示添加到桌面的颜色 -->
+    <meta name="theme-color" content="#ff7b42" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+</head>
+
+<body>
+
+    <!-- ========== 顶部标题 ========== -->
+    <header>
+        <h1>今日は何を食べようかな？</h1>
+        <p id="date-display"></p>
+    </header>
+
+    <!-- ========== 主内容区 ========== -->
+    <main>
+        <!-- 今日推荐面板 -->
+        <section id="panel-recommend" class="panel active">
+            <div id="result-cards" class="card-list recommend-list">
+                <!-- JS 动态生成菜品卡片 -->
+            </div>
+            <div class="actions">
+                <button id="btn-refresh" class="btn-primary">別の候補</button>
+            </div>
+        </section>
+
+        <!-- 菜品管理面板 -->
+        <section id="panel-manage" class="panel">
+            <div class="filter-wrapper" id="filter-wrapper">
+                <div class="filter-bar">
+                    <input type="text" id="search-input" placeholder="料理名で検索..." />
+                    <div class="filter-tags">
+                        <button class="tag-btn active" data-category="すべて">すべて</button>
+                        <button class="tag-btn" data-category="主食">主食</button>
+                        <button class="tag-btn" data-category="軽食">軽食</button>
+                        <button class="tag-btn" data-category="ドリンク">ドリンク</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 列表 -->
+            <ul id="food-list" class="card-list">
+                <!-- JS 动态生成 -->
+            </ul>
+
+            <!-- 导入导出 -->
+            <div class="actions" style="margin-top: 20px; display: flex; flex-direction: column; gap: 10px;">
+                <div style="display: flex; gap: 10px;">
+                    <button id="btn-import" class="action-btn">📥 インポート</button>
+                    <button id="btn-export" class="action-btn">📤 エクスポート</button>
+                </div>
+                <button id="btn-reset-default" class="action-btn">🔄 デフォルト読込</button>
+            </div>
+            <input type="file" id="import-file" accept=".json" style="display:none" />
+
+            <!-- 添加菜品模态弹窗（默认隐藏） -->
+            <div id="add-modal" class="modal-overlay" style="display: none;">
+                <div class="modal-content">
+                    <h3></h3>
+                    <form id="form-add">
+                        <div class="form-row">
+                            <input type="text" id="input-name" placeholder="料理名" required />
+                            <select id="input-category">
+                                <option value="主食">主食</option>
+                                <option value="軽食">軽食</option>
+                                <option value="ドリンク">ドリンク</option>
+                            </select>
+                        </div>
+                        <div class="form-row">
+                            <input type="url" id="input-link" placeholder="デリバリーリンク(任意)" />
+                            <input type="number" id="input-rating" placeholder="評価 1-10" min="1" max="10" value="5" />
+                        </div>
+                        <div class="form-row">
+                            <input type="url" id="input-image" placeholder="画像(任意)" />
+                            <input type="number" id="input-price" placeholder="参考価格 (元)" step="0.01" min="0" />
+                        </div>
+                        <div class="modal-actions">
+                            <button type="button" id="btn-cancel-add" class="btn-secondary">キャンセル</button>
+                            <button type="submit" class="btn-primary">＋追加</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </section>
+
+        <div id="edit-modal" class="modal-overlay" style="display: none;">
+            <div class="modal-content">
+                <h3>メニュー編集</h3>
+                <div class="form-row">
+                    <input type="text" id="edit-name" placeholder="料理名" required />
+                    <select id="edit-category">
+                        <option value="主食">主食</option>
+                        <option value="軽食">軽食</option>
+                        <option value="ドリンク">ドリンク</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <input type="url" id="edit-link" placeholder="デリバリーリンク" />
+                    <input type="number" id="edit-order-count" placeholder="注文回数" min="0" step="1" />
+                </div>
+                <div class="form-row">
+                    <input type="url" id="edit-image" placeholder="画像" />
+                    <input type="number" id="edit-price" placeholder="参考価格 (元)" step="0.01" min="0" />
+                </div>
+                <div class="form-row">
+                    <input type="number" id="edit-rating" placeholder="評価 1-10" min="1" max="10" value="5" />
+                </div>
+                <div class="modal-actions">
+                    <button id="btn-cancel-edit" class="btn-secondary">キャンセル</button>
+                    <button id="btn-save-edit" class="btn-primary">保存</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 浮动操作按钮（只在管理页显示） -->
+        <div class="fab-container" id="fab-container" style="display: none;">
+            <button class="fab fab-search" id="btn-toggle-search" title="検索">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <circle cx="11" cy="11" r="7" />
+                    <line x1="17" y1="17" x2="21" y2="21" />
+                </svg>
+            </button>
+            <button class="fab fab-add" id="btn-open-add" title="追加">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+            </button>
+        </div>
+
+    </main>
+
+    <div id="food-quote" class="food-quote"></div>
+
+    <!-- ========== 底部导航 ========== -->
+    <nav>
+        <button id="nav-recommend" class="nav-btn active">本日のおすすめ</button>
+        <button id="nav-manage" class="nav-btn">メニュー管理</button>
+    </nav>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('SW registered:', reg.scope))
+                    .catch(err => console.log('SW failed:', err));
+            });
+        }
+    </script>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
